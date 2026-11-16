@@ -2,15 +2,17 @@
 import { useState } from 'react'
 
 function EnterTestResults() {
-  const [results, setResults] = useState({
+  const initialResults = {
     testId: '',
     patientName: '',
     testName: '',
     result: '',
     referenceRange: '',
     remarks: '',
-  })
+  }
 
+  const [results, setResults] = useState(initialResults)
+  const [report, setReport] = useState(null)
   const [savedResults, setSavedResults] = useState([])
 
   const handleChange = (e) => {
@@ -22,28 +24,59 @@ function EnterTestResults() {
     }))
   }
 
+  const handleReportChange = (e) => {
+    const file = e.target.files[0]
+
+    if (!file) return
+
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]
+
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload a PDF, DOC or DOCX document.')
+      e.target.value = ''
+      return
+    }
+
+    setReport(file)
+  }
+
+  const handleRemoveReport = () => {
+    setReport(null)
+
+    const fileInput = document.getElementById('lab-report')
+    if (fileInput) fileInput.value = ''
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+
+    if (!report) {
+      alert('Please upload the laboratory report before saving.')
+      return
+    }
 
     setSavedResults((prev) => [
       ...prev,
       {
         ...results,
         id: `RES-${prev.length + 1}`,
+        reportName: report.name,
+        reportFile: report,
         status: 'Pending Verification',
       },
     ])
 
-    setResults({
-      testId: '',
-      patientName: '',
-      testName: '',
-      result: '',
-      referenceRange: '',
-      remarks: '',
-    })
+    setResults(initialResults)
+    setReport(null)
 
-    alert('Results saved successfully as a draft!')
+    const fileInput = document.getElementById('lab-report')
+    if (fileInput) fileInput.value = ''
+
+    alert('Results and laboratory report saved successfully as a draft!')
   }
 
   return (
@@ -136,6 +169,49 @@ function EnterTestResults() {
             </div>
           </div>
 
+          {/* Laboratory Report Upload */}
+          <div className="lab-form-group mt-4">
+            <label htmlFor="lab-report">
+              <i className="bi bi-file-earmark-medical"></i> Laboratory Report
+              <span className="text-danger"> *</span>
+            </label>
+
+            <p className="text-muted">
+              Upload the completed laboratory report (PDF, DOC or DOCX).
+            </p>
+
+            <input
+              id="lab-report"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={handleReportChange}
+              required
+            />
+
+            {report && (
+              <div className="mt-3 p-3 border rounded">
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div>
+                    <i className="bi bi-file-earmark-check text-success"></i>{' '}
+                    <strong>{report.name}</strong>
+
+                    <small className="d-block text-muted">
+                      {(report.size / 1024).toFixed(2)} KB
+                    </small>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={handleRemoveReport}
+                  >
+                    <i className="bi bi-trash"></i> Remove
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="lab-form-actions">
             <button type="submit" className="lab-primary-btn">
               <i className="bi bi-save"></i> Save Draft
@@ -155,6 +231,7 @@ function EnterTestResults() {
                 <th>Patient</th>
                 <th>Test</th>
                 <th>Result</th>
+                <th>Laboratory Report</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -162,7 +239,7 @@ function EnterTestResults() {
             <tbody>
               {savedResults.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center">
+                  <td colSpan="6" className="text-center">
                     No results entered yet.
                   </td>
                 </tr>
@@ -173,6 +250,12 @@ function EnterTestResults() {
                     <td>{item.patientName}</td>
                     <td>{item.testName}</td>
                     <td>{item.result}</td>
+                    <td>
+                      <span title={item.reportName}>
+                        <i className="bi bi-file-earmark-pdf"></i>{' '}
+                        {item.reportName}
+                      </span>
+                    </td>
                     <td>
                       <span className="lab-status pending">
                         {item.status}
@@ -190,3 +273,4 @@ function EnterTestResults() {
 }
 
 export default EnterTestResults
+
